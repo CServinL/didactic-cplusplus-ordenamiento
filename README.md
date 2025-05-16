@@ -34,3 +34,5 @@ Ligas a la Wikipedia sobre cada algoritmo
 * Radix (Radix Sort): https://en.wikipedia.org/wiki/Radix_sort
 * Árbol Binario (Binary Tree Sort): https://en.wikipedia.org/wiki/Tree_sort
 * std::sort (Introsort): https://en.wikipedia.org/wiki/Introsort
+
+Graficas comparativas en carpeta graphs

@@ -18,3 +18,19 @@ En mis pruebas:
 | Radix (Radix Sort)                        | 4   | 6    | 50   | 559    | 5095     |
 | Árbol Binario (Binary Tree Sort)          | 3   | 8    | 102  | 1484   | 23892    |
 | std::sort (usually Introsort)             | 1   | 9    | 102  | 1355   | 16024    |
+
+Al final comparamos con el sort que la mayoria de los desarrolladores va a utilizar en la practia el std::sort.
+
+GeeksforGeeks. (2024, marzo 11). IntroSort or Introspective sort. https://www.geeksforgeeks.org/introsort-or-introspective-sort/
+
+Ligas a la Wikipedia sobre cada algoritmo
+
+* Burbuja (Bubble Sort): https://en.wikipedia.org/wiki/Bubble_sort
+* Burbuja Bidireccional (Cocktail Shaker Sort): https://en.wikipedia.org/wiki/Cocktail_shaker_sort
+* Casilleros (Bucket Sort): https://en.wikipedia.org/wiki/Bucket_sort
+* Cuentas (Counting Sort): https://en.wikipedia.org/wiki/Counting_sort
+* Inserción (Insertion Sort): https://en.wikipedia.org/wiki/Insertion_sort
+* Mezcla (Merge Sort): https://en.wikipedia.org/wiki/Merge_sort
+* Radix (Radix Sort): https://en.wikipedia.org/wiki/Radix_sort
+* Árbol Binario (Binary Tree Sort): https://en.wikipedia.org/wiki/Tree_sort
+* std::sort (Introsort): https://en.wikipedia.org/wiki/Introsort

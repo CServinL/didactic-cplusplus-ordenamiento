@@ -12,6 +12,15 @@
 using namespace std;
 using namespace chrono;
 
+string formato_tiempo(int microsegundos) {
+    if (microsegundos < 1000)
+        return to_string(microsegundos) + " µs";
+    else if (microsegundos < 1'000'000)
+        return to_string(microsegundos / 1000.0).substr(0, to_string(microsegundos / 1000.0).find(".") + 3) + " ms";
+    else
+        return to_string(microsegundos / 1'000'000.0).substr(0, to_string(microsegundos / 1'000'000.0).find(".") + 3) + " s";
+}
+
 void generar_datos(vector<int>& datos, int cantidad) {
     random_device semilla;
     mt19937 generador(semilla());
@@ -21,11 +30,13 @@ void generar_datos(vector<int>& datos, int cantidad) {
         valor = distribucion(generador);
 }
 
+
 template <typename Funcion>
-long long medir_tiempo(Funcion algoritmo, vector<int> datos_originales, const string& nombre_algoritmo) {
+int medir_tiempo(Funcion algoritmo, vector<int> datos_originales, const string& nombre_algoritmo) {
     if (is_sorted(datos_originales.begin(), datos_originales.end())) {
         cerr << "[ERROR] La lista ya está ordenada antes de ejecutar '" << nombre_algoritmo << "'.";
     }
+
     auto inicio = high_resolution_clock::now();
     algoritmo(datos_originales);
     auto fin = high_resolution_clock::now();
@@ -34,7 +45,8 @@ long long medir_tiempo(Funcion algoritmo, vector<int> datos_originales, const st
         cerr << "\n[ERROR] El algoritmo '" << nombre_algoritmo << "' no ordenó correctamente.\n";
     }
 
-    return duration_cast<microseconds>(fin - inicio).count();
+    auto duracion = duration_cast<microseconds>(fin - inicio).count();
+    return duracion;
 }
 
 void ordenar_std(vector<int>& datos) {
@@ -42,6 +54,54 @@ void ordenar_std(vector<int>& datos) {
 }
 
 // Funciones de ordenamiento
+
+void seleccion(vector<int>& datos) {
+    for (size_t i = 0; i < datos.size() - 1; ++i) {
+        size_t min_idx = i;
+        for (size_t j = i + 1; j < datos.size(); ++j)
+            if (datos[j] < datos[min_idx])
+                min_idx = j;
+        swap(datos[i], datos[min_idx]);
+    }
+}
+
+void shell(vector<int>& datos) {
+    size_t n = datos.size();
+    for (size_t intervalo = n / 2; intervalo > 0; intervalo /= 2) {
+        for (size_t i = intervalo; i < n; ++i) {
+            int temp = datos[i];
+            size_t j;
+            for (j = i; j >= intervalo && datos[j - intervalo] > temp; j -= intervalo)
+                datos[j] = datos[j - intervalo];
+            datos[j] = temp;
+        }
+    }
+}
+
+void monticulos(vector<int>& datos) {
+    make_heap(datos.begin(), datos.end());
+    sort_heap(datos.begin(), datos.end());
+}
+
+void rapido(vector<int>& datos) {
+    function<void(int, int)> quicksort = [&](int bajo, int alto) {
+        if (bajo < alto) {
+            int pivote = datos[alto];
+            int i = bajo - 1;
+            for (int j = bajo; j < alto; ++j) {
+                if (datos[j] < pivote) {
+                    ++i;
+                    swap(datos[i], datos[j]);
+                }
+            }
+            swap(datos[i + 1], datos[alto]);
+            int pi = i + 1;
+            quicksort(bajo, pi - 1);
+            quicksort(pi + 1, alto);
+        }
+    };
+    quicksort(0, datos.size() - 1);
+}
 
 void burbuja(vector<int>& datos) {
     for (size_t i = 0; i < datos.size(); ++i)
@@ -178,60 +238,98 @@ void radix(vector<int>& datos) {
 }
 
 int main() {
-    vector<int> base_10, base_100, base_1000, base_10000, base_100000;
+    vector<int> base_10, base_100, base_1000, base_10000, base_100000, base_1000000;
     generar_datos(base_10, 10);
     generar_datos(base_100, 100);
     generar_datos(base_1000, 1000);
     generar_datos(base_10000, 10000);
     generar_datos(base_100000, 100000);
+    generar_datos(base_1000000, 1000000);
 
     map<string, function<void(vector<int>&)>> algoritmos = {
         {"Burbuja (Bubble Sort)", burbuja},
         {"Burbuja Bidireccional (Cocktail Sort)", burbuja_bidireccional},
+        {"Casilleros (Bucket Sort)", casilleros},
+        {"Cuentas (Counting Sort)", cuentas},
         {"Inserción (Insertion Sort)", insercion},
         {"Mezcla (Merge Sort)", mezcla},
-        {"Cuentas (Counting Sort)", cuentas},
-        {"Casilleros (Bucket Sort)", casilleros},
-        {"Árbol Binario (Binary Tree Sort)", arbol_binario},
+        {"Selección (Selection Sort)", seleccion},
+        {"Montículos (Heap Sort)", monticulos},
+        {"Rápido (Quick Sort)", rapido},
+        {"Arbol Binario (Binary Tree Sort)", arbol_binario},
         {"Radix (Radix Sort)", radix},
+        {"Concha (Shell Sort)", shell},
+        {"std::sort (usually Introsort)", ordenar_std},
     };
 
-    cout << left << setw(35) << "Algoritmo"
-         << right << setw(10) << "i10"
-         << setw(10) << "i100"
-         << setw(10) << "i1k"
-         << setw(10) << "i10k"
-         << setw(10) << "i100k" << endl;
-    cout << string(85, '-') << endl;
-
+    vector<tuple<string, string, string, string, string, string, string>> resultados; // contiene: nombre, t10, t100, t1k, t10k, t100k, t1m
     for (const auto& [nombre, algoritmo] : algoritmos) {
-        long long t10 = medir_tiempo(algoritmo, base_10, nombre);
-        long long t100 = medir_tiempo(algoritmo, base_100, nombre);
-        long long t1000 = medir_tiempo(algoritmo, base_1000, nombre);
-        long long t10000 = medir_tiempo(algoritmo, base_10000, nombre);
-        long long t100000 = medir_tiempo(algoritmo, base_100000, nombre);
+        cout << "Ejecutando: " << nombre << endl;
 
-        cout << left << setw(35) << nombre
-             << right << setw(10) << t10
-             << setw(10) << t100
-             << setw(10) << t1000
-             << setw(10) << t10000
-             << setw(10) << t100000 << endl;
+        string t10, t100, t1000, t10000, t100000, t1000000;
+        bool salto = false;
+
+        cout << "  Ejecutando algoritmo para i10" << endl;
+        int t10_us = medir_tiempo(algoritmo, base_10, nombre);
+        t10 = formato_tiempo(t10_us);
+        if (t10_us > 5'000'000) salto = true;
+
+        if (!salto) {
+            cout << "  Ejecutando algoritmo para i100" << endl;
+            int t100_us = medir_tiempo(algoritmo, base_100, nombre);
+            t100 = formato_tiempo(t100_us);
+            if (t100_us > 5'000'000) salto = true;
+        } else t100 = ">5s";
+
+        if (!salto) {
+            cout << "  Ejecutando algoritmo para i1k" << endl;
+            int t1000_us = medir_tiempo(algoritmo, base_1000, nombre);
+            t1000 = formato_tiempo(t1000_us);
+            if (t1000_us > 5'000'000) salto = true;
+        } else t1000 = ">5s";
+
+        if (!salto) {
+            cout << "  Ejecutando algoritmo para i10k" << endl;
+            int t10000_us = medir_tiempo(algoritmo, base_10000, nombre);
+            t10000 = formato_tiempo(t10000_us);
+            if (t10000_us > 5'000'000) salto = true;
+        } else t10000 = ">5s";
+
+        if (!salto) {
+            cout << "  Ejecutando algoritmo para i100k" << endl;
+            int t100000_us = medir_tiempo(algoritmo, base_100000, nombre);
+            t100000 = formato_tiempo(t100000_us);
+            if (t100000_us > 5'000'000) salto = true;
+        } else t100000 = ">5s";
+
+        if (!salto) {
+            cout << "  Ejecutando algoritmo para i1m" << endl;
+            int t1000000_us = medir_tiempo(algoritmo, base_1000000, nombre);
+            t1000000 = formato_tiempo(t1000000_us);
+        } else t1000000 = ">5s";
+
+        resultados.emplace_back(nombre, t10, t100, t1000, t10000, t100000, t1000000);
     }
 
-     string nombre = "std::sort (usually Introsort)";
-    long long t10 = medir_tiempo(ordenar_std, base_10, nombre);
-    long long t100 = medir_tiempo(ordenar_std, base_100, nombre);
-    long long t1000 = medir_tiempo(ordenar_std, base_1000, nombre);
-    long long t10000 = medir_tiempo(ordenar_std, base_10000, nombre);
-    long long t100000 = medir_tiempo(ordenar_std, base_100000, nombre);
+    cout << "\n\nRESULTADOS COMPARATIVOS (tiempos):" << endl;
+    cout << left << setw(40) << "Algoritmo"
+         << right << setw(15) << "i10"
+         << setw(15) << "i100"
+         << setw(15) << "i1k"
+         << setw(15) << "i10k"
+         << setw(15) << "i100k"
+         << setw(15) << "i1m" << endl;
+    cout << string(130, '-') << endl;
 
-    cout << left << setw(35) << nombre
-         << right << setw(10) << t10
-         << setw(10) << t100
-         << setw(10) << t1000
-         << setw(10) << t10000
-         << setw(10) << t100000 << endl;
-
+    for (const auto& [nombre, t10, t100, t1000, t10000, t100000, t1000000] : resultados) {
+        cout << left << setw(40) << nombre
+             << right << setw(15) << t10
+             << setw(15) << t100
+             << setw(15) << t1000
+             << setw(15) << t10000
+             << setw(15) << t100000
+             << setw(15) << t1000000 << endl;
+    }
+        
     return 0;
 }
